@@ -10,6 +10,7 @@
 #include "world.h"
 #include "avatar.h"
 #include "my_physics.h"
+#include "OpenWorld.h"
 
 //Moteur
 #include "engine/utils/types_3d.h"
@@ -20,7 +21,6 @@
 #include "engine/gui/screen_manager.h"
 
 
-
 NYRenderer * g_renderer = NULL;
 NYTimer * g_timer = NULL;
 int g_nb_frames = 0;
@@ -29,6 +29,9 @@ int g_main_window_id;
 int g_mouse_btn_gui_state = 0;
 bool g_fullscreen = false;
 GLuint g_shader = 0;
+GLuint g_water_shader = 0;
+GLuint g_simple_shader = 0;
+
 
 //GUI 
 GUIScreenManager * g_screen_manager = NULL;
@@ -49,12 +52,15 @@ float _dayBegin = 0.25;
 float _dayEnd = 0.75;
 
 //World
-NYWorld * g_world;
+
+//NYWorld * g_world;
+OpenWorld * g_oworld;
 
 NYAvatar * player;
 
 NYVert3Df lightPos;
 void setSkyColor();
+
 
 //////////////////////////////////////////////////////////////////////////
 // GESTION APPLICATION
@@ -158,7 +164,7 @@ void renderObjects(void)
 
 	NYVert3Df point;
 	NYVert3Df cube;
-	if (g_world->interDroiteMatrice(g_renderer->_Camera->_Position, g_renderer->_Camera->_Direction*10, point, cube)) {
+	if (g_oworld->interDroiteMatrice(g_renderer->_Camera->_Position, g_renderer->_Camera->_Direction*10, point, cube)) {
 		glPushMatrix();
 		glTranslatef(point.X, point.Y, point.Z);
 		glColor3f(1, 0, 0);
@@ -167,16 +173,20 @@ void renderObjects(void)
 	}
 
 	glEnable(GL_LIGHTING);
+	glDisable(GL_TEXTURE_2D);
 
 	glPushMatrix();
 	glRotatef((moment+time_offset) * 360 , 1, 0, 0);
-	glTranslatef(0, 0, -1000);
+	glTranslatef(0, 0, -10000);
 	NYVert3Df pos_cam = g_renderer->_Camera->_Position;
 	glTranslatef(pos_cam.X, pos_cam.Y, pos_cam.Z);
 	GLfloat emissive[] = { 1.0, 1.0, 1.0, 1.0 };
 	GLfloat no_mat[] = { 0.0, 0.0, 0.0, 1.0 };
 	glMaterialfv(GL_FRONT, GL_EMISSION, emissive);
-	glutSolidSphere(20, 20, 20);
+	glPushMatrix();
+	glTranslatef(-10, -10, -10);
+	glutSolidSphere(200, 20, 20);
+	glPopMatrix();
 	setLights();
 	glMaterialfv(GL_FRONT, GL_EMISSION, no_mat);
 
@@ -201,15 +211,21 @@ void renderObjects(void)
 	GLuint invView = glGetUniformLocation(g_shader, "invertView");
 	glUniformMatrix4fv(invView, 1, true, invertView.Mat.t);
 
+	
 
 	//Affichage du monde
 	glPushMatrix();
-	g_world->render_world_vbo();
+
+	g_oworld->render(g_shader, g_simple_shader);
+
+	g_oworld->render_water(g_water_shader, elap, invertView);
 	glPopMatrix();
 
 	
 
 }
+
+
 
 void resizeFunction(int width, int height)
 {
@@ -276,12 +292,14 @@ void keyboardDownFunction(unsigned char key, int p1, int p2)
 	if (key == 'e') {
 		NYVert3Df point;
 		NYVert3Df cube;
-		if (g_world->interDroiteMatrice(g_renderer->_Camera->_Position, g_renderer->_Camera->_Direction * 10, point, cube))
-			g_world->deleteCube(cube.X, cube.Y, cube.Z);
+		if (g_oworld->interDroiteMatrice(g_renderer->_Camera->_Position, g_renderer->_Camera->_Direction * 10, point, cube))
+			g_oworld->deleteCube(cube.X, cube.Y, cube.Z);
 	}
 
 	if (key == 't') {
 		g_shader = g_renderer->createProgram("shaders/psbase.glsl", "shaders/vsbase.glsl");
+		g_water_shader = g_renderer->createProgram("shaders/waterps.glsl", "shaders/watervs.glsl");
+		g_simple_shader = g_renderer->createProgram("shaders/pssimple.glsl", "shaders/vssimple.glsl");
 	}
 		
 
@@ -479,10 +497,13 @@ int main(int argc, char* argv[])
 	g_renderer->setRenderObjectFun(renderObjects);
 	g_renderer->setRender2DFun(render2d);
 	g_renderer->setLightsFun(setLights);
+	//g_renderer->setPPFun(postProcessVariables);
 	g_renderer->setBackgroundColor(NYColor());
 	g_renderer->initialise(true);
 
 	g_shader = g_renderer->createProgram("shaders/psbase.glsl", "shaders/vsbase.glsl");
+	g_water_shader = g_renderer->createProgram("shaders/waterps.glsl", "shaders/watervs.glsl");
+	g_simple_shader = g_renderer->createProgram("shaders/pssimple.glsl", "shaders/vssimple.glsl");
 
 	//On applique la config du renderer
 	glViewport(0, 0, g_renderer->_ScreenWidth, g_renderer->_ScreenHeight);
@@ -581,12 +602,15 @@ int main(int argc, char* argv[])
 	g_timer->start();
 
 	//Création du monde
-	g_world = new NYWorld();
-	g_world->_FacteurGeneration = 5;
-	g_world->init_world();
+	//g_world = new NYWorld();
+	//g_world->_FacteurGeneration = 5;
+	//g_world->init_world();
+
+	g_oworld = new OpenWorld();
+	g_oworld->init(&(g_renderer->_Camera->_Position));
 
 	//Init avatar
-	player = new NYAvatar(g_renderer->_Camera, g_world);
+	player = new NYAvatar(g_renderer->_Camera, g_oworld);
 	player->Position = NYVert3Df(30, 30, 100);
 	g_renderer->_Camera->_Position = player->Position;
 

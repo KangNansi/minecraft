@@ -381,10 +381,10 @@ class NYTexManager
 
 			glBindTexture(GL_TEXTURE_2D,0);
 
-			if(!isPowerOfTwo(texFile.SizeX))
+			/*if(!isPowerOfTwo(texFile.SizeX))
 				return 3;
 			if(!isPowerOfTwo(texFile.SizeY))
-				return 4;
+				return 4;*/
 			
 			//Texture chargee
 			texFile.Loaded = true;

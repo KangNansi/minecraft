@@ -4,6 +4,7 @@
 #include "engine/utils/types_3d.h"
 #include "engine/render/camera.h"
 #include "world.h"
+#include "OpenWorld.h"
 
 class NYAvatar
 {
@@ -23,9 +24,9 @@ class NYAvatar
 		bool Standing;
 
 		NYCamera * Cam;
-		NYWorld * World;
+		OpenWorld * World;
 
-		NYAvatar(NYCamera * cam,NYWorld * world)
+		NYAvatar(NYCamera * cam,OpenWorld * world)
 		{
 			Position = NYVert3Df(0,0,0);
 			Height = 1.5f;
@@ -69,7 +70,7 @@ class NYAvatar
 				F += Cam->_UpRef*-500;
 
 			//calcul de l'accélération
-			Speed = Speed + F*elapsed;
+			Speed = Speed + F*elapsed*2;
 
 			//position
 			Position = Position + Speed*elapsed;

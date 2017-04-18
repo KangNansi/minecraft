@@ -11,6 +11,9 @@
     <ClCompile Include="..\src\chunk.cpp">
       <Filter>minecraft</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\_engine\src\engine\render\graph\tex_manager.cpp">
+      <Filter>engine\render\graph</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="engine">
@@ -27,6 +30,9 @@
     </Filter>
     <Filter Include="shaders">
       <UniqueIdentifier>{914b3f24-b3ef-44eb-8db6-b9fa7f293198}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="engine\render\graph">
+      <UniqueIdentifier>{ce087fb0-4a67-4b02-96e1-2fdb4f850365}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -63,6 +69,12 @@
     <ClInclude Include="..\src\my_physics.h">
       <Filter>minecraft</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\_engine\src\engine\render\graph\tex_manager.h">
+      <Filter>engine\render\graph</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\OpenWorld.h">
+      <Filter>minecraft</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="..\run\shaders\psbase.glsl">
@@ -72,6 +84,18 @@
       <Filter>shaders</Filter>
     </None>
     <None Include="..\run\shaders\postprocess\pshader.glsl">
+      <Filter>shaders</Filter>
+    </None>
+    <None Include="..\run\shaders\waterps.glsl">
+      <Filter>shaders</Filter>
+    </None>
+    <None Include="..\run\shaders\watervs.glsl">
+      <Filter>shaders</Filter>
+    </None>
+    <None Include="..\run\shaders\pssimple.glsl">
+      <Filter>shaders</Filter>
+    </None>
+    <None Include="..\run\shaders\vssimple.glsl">
       <Filter>shaders</Filter>
     </None>
   </ItemGroup>

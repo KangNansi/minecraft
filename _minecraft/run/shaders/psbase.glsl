@@ -1,52 +1,49 @@
 varying vec3 normal;
-varying vec3 vertex_to_light_vector;
+varying vec3 vertex_to_light;
 varying vec3 vertex_to_cam;
 varying vec3 worldPos;
 varying vec4 color;
+varying vec2 texCoord;
+varying mat3 TBN;
 
 uniform float ambientLevel;
 uniform float elapsed;
-
-mat4 rotationMatrix(vec3 axis, float angle)
-{
-    axis = normalize(axis);
-    float s = sin(angle);
-    float c = cos(angle);
-    float oc = 1.0 - c;
-    
-    return mat4(oc * axis.x * axis.x + c,           oc * axis.x * axis.y - axis.z * s,  oc * axis.z * axis.x + axis.y * s,  0.0,
-                oc * axis.x * axis.y + axis.z * s,  oc * axis.y * axis.y + c,           oc * axis.y * axis.z - axis.x * s,  0.0,
-                oc * axis.z * axis.x - axis.y * s,  oc * axis.y * axis.z + axis.x * s,  oc * axis.z * axis.z + c,           0.0,
-                0.0,                                0.0,                                0.0,                                1.0);
-}
+uniform sampler2D Texture;
+uniform sampler2D TexNormal;
 
 void main()
 {
-	// Scaling The Input Vector To Length 1
-	//normal.x=cos(worldPos.x*2+elapsed);
-	//normal.y=sin(worldPos.y*4+elapsed);
-	vec3 normalized_normal = normalize(normal);
-	if(color.b>0.5){
-		normalized_normal.x += (cos(worldPos.x*3.+(elapsed*6.28))
-							+cos(worldPos.x*2.+(elapsed*6.28)/2.)
-							+cos(worldPos.x+(elapsed*6.28)/4.))/9.;
-		normalized_normal.y += (sin(worldPos.y*3.+(elapsed*6.28))
-							+sin(worldPos.y*2.+(elapsed*6.28)/2.)
-							+sin(worldPos.y+(elapsed*6.28)/4.))/9.;
-		normalized_normal = normalize(normalized_normal);
-	}
-	vec3 normalized_vertex_to_light_vector = normalize(vertex_to_light_vector);
-	vec3 normalized_half = normalize(vertex_to_light_vector+vertex_to_cam);
-	float specular = max(0,dot(normalized_half,normalized_normal));
-	// Calculating The Diffuse Term And Clamping It To [0;1]
-	float DiffuseTerm = clamp(dot(normalized_normal, vertex_to_light_vector), 0.0, 1.0);
 
-	// Calculating The Final Color
-	color.rgb *= (0.5+specular/2.);
+	//Normal de base du fragment
+	vec3 base_normal = normalize(normal);
+
+	//Normal de la normal map en world space
+	vec3 normalized_normal = normalize(TBN * (texture2D(TexNormal, gl_TexCoord[0]).rgb*2-1));
+	
+
+	vec3 normalized_vertex_to_light_vector = normalize(vertex_to_light);
+	vec3 normalized_half = normalize((vertex_to_light+vertex_to_cam));
+
+	//Calcul de la diffuse de base, permets d'éviter certains artefacts
+	float normal_diffuse = clamp(dot(base_normal, vertex_to_light), 0.0, 1.0);
+
+	//Calcul de la speculaire avec un half vector
+	float specular=clamp(dot(normalized_half,normalized_normal),0.0,1.0);
+
+	//Calcul de la diffuse avec la normal map
+	float DiffuseTerm = clamp(dot(normalized_normal, vertex_to_light), 0.0, 1.0);
+
+	//On fade la speculaire quand la diffuse s'approche de 0
+	//Permets d'éviter de voir la speculaire quand la lumiere est de l'autre coté du polygone
+	if(normal_diffuse<0.2)
+		specular*=normal_diffuse*5;
+	
+	//color.rgb *= specular;
+	color.rgb = texture2D(Texture, gl_TexCoord[0].xy);//gl_TexCoord[0].xy*(128/32.);
+	color.rgb = (0.4+(0.4*DiffuseTerm+(0.3*specular)))*color.rgb;
+
 	gl_FragColor.rgb = color.rgb;
-	gl_FragColor.r = (int)(color.r*20.)/20.;//specular;//color.rgb * (specular*DiffuseTerm*(1-ambientLevel) + ambientLevel) - gl_FragColor.rgb*(1-gl_FragColor.a);
-	gl_FragColor.g = (int)(color.g*20.)/20.;
-	gl_FragColor.b = (int)(color.b*20.)/20.;
+
 	
 	gl_FragColor.a = color.a;
 }

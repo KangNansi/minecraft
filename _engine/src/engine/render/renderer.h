@@ -28,7 +28,8 @@ class NYRenderer
 		void (*_RenderObjectsDepthOnlyFun)(void); ///< Fonction de rendu d'objets uniquement dans le z buffer (pour certains rendus uniquement)
 		void (*_Render2DFun)(void); ///< Rendu en 2d (en passe en mode camera ortho, etc...)
 		void (*_SetLights)(void); ///< Choisit la position des lumieres (besoin de le faire dans le bon referentiel, après matrice view défine)
-		
+		void(*_SetPPV)(void); ///< Callback pour pouvoir ajouter des variables au post process
+
 		//Post Process
 		bool _DoPostProcess;
 		GLuint _ColorTexPP; ///< Rendu ecran pour le post process
@@ -154,6 +155,10 @@ class NYRenderer
 			this->_SetLights = fun;
 		}
 
+		void setPPFun(void(*fun)(void)) {
+			this->_SetPPV = fun;
+		}
+
 		void render(float elapsed)
 		{
 			//Le temps
@@ -256,6 +261,7 @@ class NYRenderer
 				glLoadIdentity();
 
 				//on set les variables du shader
+				//this->_SetPPV();
 				GLuint texLoc = glGetUniformLocation(_ProgramPP, "Texture0");
 				glUniform1i(texLoc, 0);
 

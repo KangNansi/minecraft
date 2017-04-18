@@ -7,6 +7,7 @@
 #include "cube.h"
 #include "chunk.h"
 #include "NYPerlin.h"
+#include "engine/render/graph/tex_manager.h"
 
 #include "my_physics.h"
 
@@ -15,7 +16,7 @@ typedef uint8 NYAxis;
 #define NY_AXIS_Y 0x02
 #define NY_AXIS_Z 0x04
 
-#define MAT_SIZE 10 //en nombre de chunks
+#define MAT_SIZE 3 //en nombre de chunks
 #define MAT_HEIGHT 2 //en nombre de chunks
 #define MAT_SIZE_CUBES (MAT_SIZE * NYChunk::CHUNK_SIZE)
 #define MAT_HEIGHT_CUBES (MAT_HEIGHT * NYChunk::CHUNK_SIZE)
@@ -27,6 +28,10 @@ public :
 	NYChunk * _Chunks[MAT_SIZE][MAT_SIZE][MAT_HEIGHT];
 	int _MatriceHeights[MAT_SIZE_CUBES][MAT_SIZE_CUBES];
 	float _FacteurGeneration;
+	GLuint _perlinTexture;
+	NYTexFile * _blocTexture;
+	NYTexFile * _blocNormal;
+	static const int WATER_LEVEL = 14;
 
 	//Perlin
 	NYPerlin perlin;
@@ -124,7 +129,7 @@ public :
 			return;
 		if (height <= 0) height = 1;
 		for (int i = 0; i < MAT_HEIGHT_CUBES; i++) {
-			if ((i>height && i<14) )
+			if ((i>height && i<WATER_LEVEL) )
 				getCube(x, y, i)->_Type = CUBE_EAU;
 			else if(i<height)
 				getCube(x, y, i)->_Type = CUBE_TERRE;
@@ -220,9 +225,14 @@ public :
 
 	}
 	
+	void perlinage(int x, int y) {
+		for(int i=0;i<MAT_SIZE_CUBES;i++)
+			for (int j = 0; j < MAT_SIZE_CUBES; j++) {
+				load_pile(i, j, 1 + ((MAT_HEIGHT_CUBES/1.2)*perlin.sample(x * 10 + (i / (float)MAT_SIZE_CUBES)*10, y * 10 + (j / (float)MAT_SIZE_CUBES) * 10, 0)));
+			}
+	}
 
-
-	void init_world(int profmax = -1)
+	void init_world(int x, int y, int profmax = -1)
 	{
 		_cprintf("Creation du monde %f \n",_FacteurGeneration);
 
@@ -236,7 +246,7 @@ public :
 		memset(_MatriceHeights,0x00,MAT_SIZE_CUBES*MAT_SIZE_CUBES*sizeof(int));
 
 		//On charge les 4 coins
-		load_pile(0,0,MAT_HEIGHT_CUBES/2);
+		/*load_pile(0,0,MAT_HEIGHT_CUBES/2);
 		load_pile(MAT_SIZE_CUBES-1,0,MAT_HEIGHT_CUBES/2);
 		load_pile(MAT_SIZE_CUBES-1,MAT_SIZE_CUBES-1, MAT_HEIGHT_CUBES / 2);
 		load_pile(0,MAT_SIZE_CUBES-1,MAT_HEIGHT_CUBES/2);
@@ -247,7 +257,8 @@ public :
 			MAT_SIZE_CUBES-1,MAT_SIZE_CUBES-1,
 			0,MAT_SIZE_CUBES-1,1,profmax);	
 		//Lissage
-		lisse();
+		lisse();*/
+		perlinage(x,y);
 
 		for(int x=0;x<MAT_SIZE;x++)
 			for(int y=0;y<MAT_SIZE;y++)
@@ -255,6 +266,10 @@ public :
 					_Chunks[x][y][z]->disableHiddenCubes();
 
 				}
+
+		generate_perlin_texture();
+		_blocTexture = NYTexManager::getInstance()->loadTexture(std::string("blocTex.png"));
+		_blocNormal = NYTexManager::getInstance()->loadTexture(std::string("blocTex_n.png"));
 
 		add_world_to_vbo();
 	}
@@ -488,6 +503,59 @@ public :
 					_Chunks[x][y][z]->render(false);
 					glPopMatrix();
 				}
+	}
+
+	void render_opaque_vbo(void) {
+		
+
+		for (int x = 0; x<MAT_SIZE; x++)
+			for (int y = 0; y<MAT_SIZE; y++)
+				for (int z = 0; z<MAT_HEIGHT; z++)
+				{
+					glPushMatrix();
+					glTranslatef((float)(x*NYChunk::CHUNK_SIZE*NYCube::CUBE_SIZE), (float)(y*NYChunk::CHUNK_SIZE*NYCube::CUBE_SIZE), (float)(z*NYChunk::CHUNK_SIZE*NYCube::CUBE_SIZE));
+					_Chunks[x][y][z]->render();
+					glPopMatrix();
+				}
+		
+	}
+
+	void generate_perlin_texture(void) {
+		//glEnable(GL_TEXTURE_3D);
+		
+		float* buffer = perlin.generatePerlinTexture2D(64, 64);
+		glGenTextures(1, &_perlinTexture);
+		glBindTexture(GL_TEXTURE_2D, _perlinTexture);
+
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RED, 64, 64, 0, GL_RED, GL_FLOAT, buffer);
+
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+		
+
+		//glBindTexture(GL_TEXTURE_2D, 0);
+		delete buffer;
+	}
+
+	void render_water_vbo() {
+		//glBindTexture(GL_TEXTURE_2D, 0);
+		glActiveTexture(GL_TEXTURE0);
+		glBindTexture(GL_TEXTURE_2D, _perlinTexture);
+
+		for (int x = 0; x<MAT_SIZE; x++)
+			for (int y = 0; y<MAT_SIZE; y++)
+				for (int z = 0; z<MAT_HEIGHT; z++)
+				{
+					glPushMatrix();
+					glTranslatef((float)(x*NYChunk::CHUNK_SIZE*NYCube::CUBE_SIZE), (float)(y*NYChunk::CHUNK_SIZE*NYCube::CUBE_SIZE), (float)(z*NYChunk::CHUNK_SIZE*NYCube::CUBE_SIZE));
+					_Chunks[x][y][z]->render(false);
+					glPopMatrix();
+				}
+
 	}
 
 	void add_world_to_vbo(void)

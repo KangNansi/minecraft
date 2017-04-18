@@ -1,6 +1,7 @@
 varying vec3 normal;
 varying vec3 vertex_to_light_vector;
 varying vec4 color;
+varying vec2 texCoord;
 
 uniform float elapsed;
 uniform mat4 invertView;
@@ -12,10 +13,13 @@ void main()
 
 	// Transforming The Normal To ModelView-Space
 	normal = gl_NormalMatrix * gl_Normal; 
-
+	
 	//Direction lumiere
 	vertex_to_light_vector = vec3(gl_LightSource[0].position);
 
 	//Couleur
 	color = normal;
+
+	//Texture coords
+	texCoord = gl_TexCoord;
 }

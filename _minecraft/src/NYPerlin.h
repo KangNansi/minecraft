@@ -32,23 +32,29 @@ public:
 		float sample(float xBase, float yBase, float zBase)
 		{
 			float x = xBase;
+			if (x < 0) x = -x;
 			float y = yBase;
+			if (y < 0) y = -y;
 			float z = zBase;
+			if (z < 0) z = -z;
 
-			while (x > _Width)
+			while (x >= _Width)
 				x -= _Width;
-			while (y > _Width)
+			while (y >= _Width)
 				y -= _Width;
-			while (z > _Width)
+			while (z >= _Width)
 				z -= _Width;
 
 
 			int x1 = floor(x);
 			int x2 = floor(x) + 1;
+			if (x2 >= _Width) x2 -= _Width;
 			int y1 = floor(y);
 			int y2 = floor(y) + 1;
+			if (y2 >= _Width) y2 -= _Width;
 			int z1 = floor(z);
 			int z2 = floor(z) + 1;
+			if (z2 >= _Width) z2 -= _Width;
 			float dx = x - x1;
 			float dy = y - y1;
 			float dz = z - z1;
@@ -89,5 +95,32 @@ public:
 
 			
 			return res;
+		}
+
+		int get3DIndex(int x, int y, int z, int w, int h) {
+			return (x%w) + y*w + z*w*h;
+		}
+
+		float* generatePerlinTexture2D(int width, int height) {
+			float* buffer = new float[width*height];
+			float ratio = (50 / (float)width);
+			for (int i = 0; i<width; i++)
+				for (int j = 0; j<height; j++) {
+						buffer[(i%width)+j*width] = sample((i/((float)width))*49, (j/((float)width))*49, 0);
+					}
+
+			return buffer;
+		}
+
+		float* generatePerlinTexture3D(int width, int height, int depth) {
+			float* buffer = new float[width*height*depth];
+			
+			for(int i=0;i<width;i++)
+			for(int j=0;j<height;j++)
+			for (int k = 0; k < depth; k++) {
+				buffer[get3DIndex(i, j, k, width, height)] = sample(i/(float)width,j/(float)height,k/(float)depth);
+			}
+
+			return buffer;
 		}
 };
