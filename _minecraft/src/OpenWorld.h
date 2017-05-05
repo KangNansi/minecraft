@@ -16,13 +16,26 @@ public:
 		x = _x; y = _y;
 	}
 
-	bool operator=(const MapPosition &p) {
+	MapPosition(const MapPosition &p) {
+		x = p.x;
+		y = p.y;
+	}
+
+	bool operator==(const MapPosition &p) {
 		return x == p.x && y == p.y;
 	}
 
-	bool operator<(const MapPosition &p) const {
-		return x < p.x && y < p.y;
+	bool operator<(const MapPosition& p) const
+	{
+		if (x < p.x)  return true;
+		if (x > p.x)  return false;
+		// Otherwise a are equal
+		if (y < p.y)  return true;
+		if (y > p.y)  return false;
+		// Otherwise both are equal
+		return false;
 	}
+
 
 	MapPosition& operator+(const MapPosition &p) {
 		return MapPosition(x + p.x, y + p.y);
@@ -34,6 +47,11 @@ class OpenWorld {
 private:
 	std::map<MapPosition, NYWorld*> maps;
 	NYVert3Df *camera_position;
+	NYTexFile *_blocTex;
+	NYTexFile *_blocNorm;
+
+	//Perlin
+	NYPerlin perlin;
 
 public:
 	OpenWorld() {};
@@ -44,12 +62,16 @@ public:
 		MapPosition pos;
 		pos.x = camera_position->X / (MAT_SIZE*NYChunk::CHUNK_SIZE*NYCube::CUBE_SIZE);
 		pos.y = camera_position->Y / (MAT_SIZE*NYChunk::CHUNK_SIZE*NYCube::CUBE_SIZE);
+		
+		//Chargements des textures
+		_blocTex = NYTexManager::getInstance()->loadTexture(std::string("blocTex.png"));
+		_blocNorm = NYTexManager::getInstance()->loadTexture(std::string("blocTex_n.png"));
 
 		maps[pos] = new NYWorld();
 		maps[pos]->_FacteurGeneration = 5;
-		maps[pos]->init_world(pos.x,pos.y);
+		maps[pos]->init_world(pos.x,pos.y, _blocTex, _blocNorm, perlin);
 		
-
+		
 	}
 
 	void renderNear(MapPosition pos, GLuint shader) {
@@ -94,7 +116,7 @@ public:
 				if (maps[rpos] == nullptr) {
 					maps[rpos] = new NYWorld();
 					maps[rpos]->_FacteurGeneration = 5;
-					maps[rpos]->init_world(rpos.x, rpos.y);
+					maps[rpos]->init_world(rpos.x, rpos.y, _blocTex, _blocNorm, perlin);
 				}
 				renderNear(rpos, shader);
 			}
@@ -106,7 +128,7 @@ public:
 				if (maps[rpos] == nullptr) {
 					maps[rpos] = new NYWorld();
 					maps[rpos]->_FacteurGeneration = 5;
-					maps[rpos]->init_world(rpos.x,rpos.y);
+					maps[rpos]->init_world(rpos.x,rpos.y, _blocTex, _blocNorm, perlin);
 				}
 				renderFar(rpos, simple);
 			}
@@ -134,7 +156,7 @@ public:
 				if (maps[rpos] == nullptr) {
 					maps[rpos] = new NYWorld();
 					maps[rpos]->_FacteurGeneration = 5;
-					maps[rpos]->init_world(rpos.x,rpos.y);
+					maps[rpos]->init_world(rpos.x,rpos.y, _blocTex, _blocNorm, perlin);
 				}
 				glPushMatrix();
 				glTranslatef(rpos.x*WCHUNK_SIZE, rpos.y*WCHUNK_SIZE, 0);
@@ -146,7 +168,10 @@ public:
 	bool interDroiteMatrice(NYVert3Df origine, NYVert3Df direction, NYVert3Df &inter, NYVert3Df &cube_result) {
 		MapPosition pos;
 		pos.x = origine.X / (MAT_SIZE*NYChunk::CHUNK_SIZE*NYCube::CUBE_SIZE);
+		if (origine.X < 0) pos.x -= 1;
 		pos.y = origine.Y / (MAT_SIZE*NYChunk::CHUNK_SIZE*NYCube::CUBE_SIZE);
+		if (origine.Y < 0) pos.y -= 1;
+		if (maps[pos] == nullptr) return false;
 		origine.X -= pos.x*WCHUNK_SIZE;
 		origine.Y -= pos.y*WCHUNK_SIZE;
 		bool b = maps[pos]->interDroiteMatrice(origine, direction, inter, cube_result);
@@ -158,10 +183,23 @@ public:
 	void deleteCube(int x, int y, int z) {
 		MapPosition pos;
 		pos.x = x/(MAT_SIZE*NYChunk::CHUNK_SIZE);
+		if (x < 0) pos.x -= 1;
 		pos.y = y/(MAT_SIZE*NYChunk::CHUNK_SIZE);
+		if (y < 0) pos.y -= 1;
 		x = x%(MAT_SIZE*NYChunk::CHUNK_SIZE);
 		y = y%(MAT_SIZE*NYChunk::CHUNK_SIZE);
 		maps[pos]->deleteCube(x, y, z);
+	}
+
+	void addCube(int x, int y, int z) {
+		MapPosition pos;
+		pos.x = x / (MAT_SIZE*NYChunk::CHUNK_SIZE);
+		if (x < 0) pos.x -= 1;
+		pos.y = y / (MAT_SIZE*NYChunk::CHUNK_SIZE);
+		if (y < 0) pos.y -= 1;
+		x = x % (MAT_SIZE*NYChunk::CHUNK_SIZE);
+		y = y % (MAT_SIZE*NYChunk::CHUNK_SIZE);
+		maps[pos]->addCube(x, y, z);
 	}
 
 	NYAxis getMinCol(NYVert3Df position, NYVert3Df dir, float width, float height, float & valueColMin, bool oneShot) {
@@ -170,6 +208,7 @@ public:
 		if (position.X < 0) pos.x -= 1;
 		pos.y = position.Y / (MAT_SIZE*NYChunk::CHUNK_SIZE*NYCube::CUBE_SIZE);
 		if (position.Y < 0) pos.y -= 1;
+		if (maps[pos] == nullptr) return NYAxis();
 		position.X -= pos.x*WCHUNK_SIZE;
 		position.Y -= pos.y*WCHUNK_SIZE;
 		return maps[pos]->getMinCol(position, dir, width, height, valueColMin, oneShot);

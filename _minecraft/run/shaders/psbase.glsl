@@ -18,7 +18,8 @@ void main()
 	vec3 base_normal = normalize(normal);
 
 	//Normal de la normal map en world space
-	vec3 normalized_normal = normalize(TBN * (texture2D(TexNormal, gl_TexCoord[0]).rgb*2-1));
+	vec3 normal_map = texture2D(TexNormal, gl_TexCoord[0]).rgb*2-1;
+	vec3 normalized_normal = normalize(TBN * normal_map);
 	
 
 	vec3 normalized_vertex_to_light_vector = normalize(vertex_to_light);
@@ -35,15 +36,17 @@ void main()
 
 	//On fade la speculaire quand la diffuse s'approche de 0
 	//Permets d'éviter de voir la speculaire quand la lumiere est de l'autre coté du polygone
-	if(normal_diffuse<0.2)
+	if(normal_diffuse<0.2){
 		specular*=normal_diffuse*5;
+		DiffuseTerm*=normal_diffuse*5;
+	}
 	
 	//color.rgb *= specular;
-	color.rgb = texture2D(Texture, gl_TexCoord[0].xy);//gl_TexCoord[0].xy*(128/32.);
-	color.rgb = (0.4+(0.4*DiffuseTerm+(0.3*specular)))*color.rgb;
+	vec4 final_color = texture2D(Texture, gl_TexCoord[0].xy);//gl_TexCoord[0].xy*(128/32.);
+	final_color.rgb = (0.2+(0.6*DiffuseTerm+(0.2*specular)))*final_color.rgb;
 
-	gl_FragColor.rgb = color.rgb;
+	gl_FragColor.rgb = final_color.rgb;
 
 	
-	gl_FragColor.a = color.a;
+	gl_FragColor.a = final_color.a;
 }

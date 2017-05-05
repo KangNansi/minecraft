@@ -124,7 +124,7 @@ void setSkyColor() {
 
 void render2d(void)
 {
-	g_screen_manager->render();
+	//g_screen_manager->render();
 }
 
 void setLights(void)
@@ -296,6 +296,13 @@ void keyboardDownFunction(unsigned char key, int p1, int p2)
 			g_oworld->deleteCube(cube.X, cube.Y, cube.Z);
 	}
 
+	if (key == 'a') {
+		NYVert3Df point;
+		NYVert3Df cube;
+		if (g_oworld->interDroiteMatrice(g_renderer->_Camera->_Position, g_renderer->_Camera->_Direction * 10, point, cube))
+			g_oworld->addCube(cube.X, cube.Y, cube.Z);
+	}
+
 	if (key == 't') {
 		g_shader = g_renderer->createProgram("shaders/psbase.glsl", "shaders/vsbase.glsl");
 		g_water_shader = g_renderer->createProgram("shaders/waterps.glsl", "shaders/watervs.glsl");
@@ -419,7 +426,7 @@ void clickBtnCloseParam (GUIBouton * bouton)
 int main(int argc, char* argv[])
 { 
 	LogConsole::createInstance();
-
+	srand(777);
 	int screen_width = 800;
 	int screen_height = 600;
 

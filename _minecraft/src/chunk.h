@@ -14,8 +14,8 @@ class NYChunk
 		static const int CHUNK_SIZE = 16; ///< Taille d'un chunk en nombre de cubes (n*n*n)
 		NYCube _Cubes[CHUNK_SIZE][CHUNK_SIZE][CHUNK_SIZE]; ///< Cubes contenus dans le chunk
 
-		static const int TEX_SIZE = 128;
-		static const int SPRITE_SIZE = 16;
+		static const int TEX_SIZE = 512;
+		static const int SPRITE_SIZE = 64;
 
 		GLuint _BufWorld; ///< Identifiant du VBO pour le monde
 		GLuint _BufWorldT; ///< VBO des faces translucides

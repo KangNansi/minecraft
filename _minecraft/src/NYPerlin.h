@@ -12,7 +12,7 @@ class NYPerlin
 
 		NYPerlin()
 		{
-			_Width = 50;
+			_Width = 128;
 			_Size = _Width*_Width*_Width;
 			_Dirs = new NYVert3Df[_Size];
 			for (int i = 0; i < _Size; i++) 

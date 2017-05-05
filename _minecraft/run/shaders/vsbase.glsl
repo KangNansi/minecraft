@@ -36,9 +36,9 @@ void main()
 	if(normal.z!=0){
 		tangent = vec3(-1,0,0);
 		if(normal.z>0)
-			bitangent = vec3(0,-1,0);
-		else
 			bitangent = vec3(0,1,0);
+		else
+			bitangent = vec3(0,-1,0);
 	}
 	if(normal.y!=0){
 		bitangent = vec3(0,0,-1);

@@ -16,7 +16,7 @@ typedef uint8 NYAxis;
 #define NY_AXIS_Y 0x02
 #define NY_AXIS_Z 0x04
 
-#define MAT_SIZE 3 //en nombre de chunks
+#define MAT_SIZE 5 //en nombre de chunks
 #define MAT_HEIGHT 2 //en nombre de chunks
 #define MAT_SIZE_CUBES (MAT_SIZE * NYChunk::CHUNK_SIZE)
 #define MAT_HEIGHT_CUBES (MAT_HEIGHT * NYChunk::CHUNK_SIZE)
@@ -28,13 +28,13 @@ public :
 	NYChunk * _Chunks[MAT_SIZE][MAT_SIZE][MAT_HEIGHT];
 	int _MatriceHeights[MAT_SIZE_CUBES][MAT_SIZE_CUBES];
 	float _FacteurGeneration;
-	GLuint _perlinTexture;
 	NYTexFile * _blocTexture;
 	NYTexFile * _blocNormal;
-	static const int WATER_LEVEL = 14;
+	static const int WATER_LEVEL = 17;
+	static const int PERLIN_DIV = 50;
 
-	//Perlin
-	NYPerlin perlin;
+
+	
 
 	NYWorld()
 	{
@@ -117,6 +117,14 @@ public :
 		NYCube * cube = getCube(x, y, z);
 		cube->_Draw = false;
 		cube->_Type = CUBE_AIR;
+		updateCube(x, y, z);
+	}
+
+	void addCube(int x, int y, int z)
+	{
+		NYCube * cube = getCube(x, y, z);
+		cube->_Draw = true;
+		cube->_Type = CUBE_TERRE;
 		updateCube(x, y, z);
 	}
 
@@ -225,18 +233,21 @@ public :
 
 	}
 	
-	void perlinage(int x, int y) {
+	void perlinage(NYPerlin &perlin, int x, int y) {
 		for(int i=0;i<MAT_SIZE_CUBES;i++)
 			for (int j = 0; j < MAT_SIZE_CUBES; j++) {
-				load_pile(i, j, 1 + ((MAT_HEIGHT_CUBES/1.2)*perlin.sample(x * 10 + (i / (float)MAT_SIZE_CUBES)*10, y * 10 + (j / (float)MAT_SIZE_CUBES) * 10, 0)));
+				float sample = perlin.sample((x*MAT_SIZE_CUBES + i) / (float)PERLIN_DIV, (y*MAT_SIZE_CUBES + j) / (float)PERLIN_DIV, 25);
+				//Tweaking du sample pour augmenter la range
+				sample = sample*(sample * 2)*(sample * 2)-0.15;
+				load_pile(i, j, 1 + (MAT_HEIGHT_CUBES*sample));
 			}
 	}
 
-	void init_world(int x, int y, int profmax = -1)
+	void init_world(int _x, int _y, NYTexFile *bloc, NYTexFile *blocn, NYPerlin &perlin, int profmax = -1)
 	{
 		_cprintf("Creation du monde %f \n",_FacteurGeneration);
 
-		srand(6665);
+		
 
 		//Reset du monde
 		for(int x=0;x<MAT_SIZE;x++)
@@ -258,7 +269,7 @@ public :
 			0,MAT_SIZE_CUBES-1,1,profmax);	
 		//Lissage
 		lisse();*/
-		perlinage(x,y);
+		perlinage(perlin,_x,_y);
 
 		for(int x=0;x<MAT_SIZE;x++)
 			for(int y=0;y<MAT_SIZE;y++)
@@ -267,9 +278,8 @@ public :
 
 				}
 
-		generate_perlin_texture();
-		_blocTexture = NYTexManager::getInstance()->loadTexture(std::string("blocTex.png"));
-		_blocNormal = NYTexManager::getInstance()->loadTexture(std::string("blocTex_n.png"));
+		_blocTexture = bloc;
+		_blocNormal = blocn;
 
 		add_world_to_vbo();
 	}
@@ -520,31 +530,10 @@ public :
 		
 	}
 
-	void generate_perlin_texture(void) {
-		//glEnable(GL_TEXTURE_3D);
-		
-		float* buffer = perlin.generatePerlinTexture2D(64, 64);
-		glGenTextures(1, &_perlinTexture);
-		glBindTexture(GL_TEXTURE_2D, _perlinTexture);
 
-		glTexImage2D(GL_TEXTURE_2D, 0, GL_RED, 64, 64, 0, GL_RED, GL_FLOAT, buffer);
-
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-
-		
-
-		//glBindTexture(GL_TEXTURE_2D, 0);
-		delete buffer;
-	}
 
 	void render_water_vbo() {
 		//glBindTexture(GL_TEXTURE_2D, 0);
-		glActiveTexture(GL_TEXTURE0);
-		glBindTexture(GL_TEXTURE_2D, _perlinTexture);
 
 		for (int x = 0; x<MAT_SIZE; x++)
 			for (int y = 0; y<MAT_SIZE; y++)
